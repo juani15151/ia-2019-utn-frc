@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 
 
 def main():
+    # Lectura
     entradas = []
     with open('X_train.csv') as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
@@ -18,19 +19,34 @@ def main():
         for line in csv_reader:
             salida_esperada.append(int(line[0]))
 
-
     assert len(entradas) == len(salida_esperada)
 
-    colors = ['r', 'b']
+    # TODO: Normalizar los valores entre 0 y 10 primero.
 
-    cantidad_caracteristicas = len(entradas[0])
+    # Transformacion
+    transformado = []
+    for x in entradas:
+        transformado.append([x[4]**2,
+                             # x[0] * x[1] * x[2] * x[3] * x[4],
+                             x[0]**2 * x[1],
+                             x[0] * x[1]**2,
+                             ])
+
+
+    # Grafico
+    colors = ['r', 'b']
+    cantidad_caracteristicas = len(transformado[0])
     for x1 in range(0, cantidad_caracteristicas):
         for x2 in range(x1, cantidad_caracteristicas):
-            for i in range(0, len(entradas)):
-                entrada_actual = entradas[i]
+            if x1 == x2:
+                continue
+            # for i in range(0, len(transformado)):
+            for i in range(0, 500):
+                entrada_actual = transformado[i]
                 plt.scatter(entrada_actual[x1], entrada_actual[x2], c=colors[salida_esperada[i]])
             # plt.plot()  # Muestra el grafico
-            plt.savefig("datos/x" + str(x1) + "-" + "x" + str(x2) + ".png")
+
+            plt.savefig("datos/test/x{0}-x{1}.png".format(x1, x2))
             plt.clf()  # Limpia el grafico
 
 
