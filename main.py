@@ -21,7 +21,7 @@ def main():
 
     assert len(entradas) == len(salida_esperada)
 
-    # TODO: Normalizar los valores entre 0 y 10 primero.
+    # TODO: Normalizar los valores entre 0 y 10 primero?
 
     # Transformacion
     transformado = []
