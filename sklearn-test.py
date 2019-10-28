@@ -11,9 +11,9 @@ entradas = []
 with open('X_train.csv') as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
     for row in csv_reader:
-        # line = [float(row[0]), float(row[1]), float(row[2]), float(row[3]), float(row[4])]
-        media = 5.0  # Normalizar con media 0.
-        line = [float(row[0]) - media, float(row[1]) - media, float(row[2]) - media, float(row[3]) - media, float(row[4]) - media]
+        line = [float(row[0]), float(row[1]), float(row[2]), float(row[3]), float(row[4])]
+        line.append(line[4]**2)
+        line.append(line[0]*line[1]*line[2]*line[3])
 
         entradas.append(line)
 
@@ -26,19 +26,28 @@ with open('Y_train.csv') as csv_file:
 
 assert len(entradas) == len(salida_esperada)
 
-# TODO: No recortar las entradas.
+entradas = np.array(entradas)
+# entradas = entradas / np.sqrt(np.sum(entradas**2)) # Normalizar
+entradas = entradas - np.mean(entradas)  # mover a media 0
+entradas = entradas / np.max(entradas)  # normalizar entre -1 y 1.
+salida_esperada = np.array(salida_esperada)
 
+## -- Mezclar el orden de los datos. -- (Sospecho que estan ordenados de alguna manera)
+
+rnd_seed = np.random.get_state()
+print(rnd_seed)
+np.random.shuffle(entradas)
+np.random.set_state(rnd_seed)
+np.random.shuffle(salida_esperada)
 
 n = int(len(entradas) * 0.75)  # Corte de los datos de entramiento.
 print("Cantidad datos: " + str(len(entradas)))
 p = len(entradas[0])  # Cantidad de entradas.
 
 X = np.array(entradas[:n])
-X = X / np.sqrt(np.sum(X**2))  # Normalizar
 Y = np.array(salida_esperada[:n])
 
 X_hidden = np.array(entradas[n:])
-X_hidden = X_hidden / np.sqrt(np.sum(X_hidden**2))  # Normalizar
 Y_hidden = np.array(salida_esperada[n:])
 
 Y = Y[:, np.newaxis]
@@ -77,7 +86,7 @@ def create_nn(topology, act_f):
 # topologia # error Min. set entrenamiento / error Min set control
 # topology = [p, 10, 1] # 0.2430 / 0.2511
 # topology = [p, 11, 7, 1] # 0.2382 / 0.2499
-topology = [p, p*2, p*3, 1]
+topology = [p, 7, 11, 1]
 # topology = [p, 10, 1]
 
 neural_net = create_nn(topology, sigm)
@@ -128,17 +137,20 @@ loss = []
 loss_hidden = []
 
 
-for iteracion in range(4500):
+for iteracion in range(18000):
 
     # Entrenemos a la red!
-    if iteracion < 300:
-        pY = train(neural_n, X, Y, l2_cost, lr=0.01)
-    elif iteracion < 1500:
-        pY = train(neural_n, X, Y, l2_cost, lr=0.01)
-    elif iteracion < 2400:
-        pY = train(neural_n, X, Y, l2_cost, lr=0.001)
-    else:
-        pY = train(neural_n, X, Y, l2_cost, lr=0.0001)
+    # if iteracion < 11250:
+    #     pY = train(neural_n, X, Y, l2_cost, lr=0.000001)
+    # elif iteracion < 450:
+    #     pY = train(neural_n, X, Y, l2_cost, lr=0.00001)
+    # else:
+    #     pY = train(neural_n, X, Y, l2_cost, lr=0.0000001)
+
+    pY = train(neural_n, X, Y, l2_cost, lr=0.000001)
+
+    # if iteracion % 400 == 0:
+    #     time.sleep(0.5)
 
     if iteracion % 450 == 0:
         # print(pY)
