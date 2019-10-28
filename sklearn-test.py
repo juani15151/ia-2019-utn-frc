@@ -12,7 +12,7 @@ with open('X_train.csv') as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
     for row in csv_reader:
         # line = [float(row[0]), float(row[1]), float(row[2]), float(row[3]), float(row[4])]
-        media = 5  # Normalizar con media 0.
+        media = 5.0  # Normalizar con media 0.
         line = [float(row[0]) - media, float(row[1]) - media, float(row[2]) - media, float(row[3]) - media, float(row[4]) - media]
 
         entradas.append(line)
@@ -34,11 +34,11 @@ print("Cantidad datos: " + str(len(entradas)))
 p = len(entradas[0])  # Cantidad de entradas.
 
 X = np.array(entradas[:n])
-# X = X / np.sqrt(np.sum(X**2))  # Normalizar
+X = X / np.sqrt(np.sum(X**2))  # Normalizar
 Y = np.array(salida_esperada[:n])
 
 X_hidden = np.array(entradas[n:])
-# X_hidden = X_hidden / np.sqrt(np.sum(X_hidden**2))  # Normalizar
+X_hidden = X_hidden / np.sqrt(np.sum(X_hidden**2))  # Normalizar
 Y_hidden = np.array(salida_esperada[n:])
 
 Y = Y[:, np.newaxis]
@@ -57,8 +57,8 @@ class neural_layer():
 
 
 # FUNCIONES DE ACTIVACION
-sigm = (lambda x: 1 / (1 + np.e ** (-x)),
-        lambda x: x * (1 - x))
+sigm = (lambda x: 1 / (1 + np.e ** (-x)),  # forward
+        lambda x: x * (1 - x))  # backward
 
 relu = lambda x: np.maximum(0, x)
 
@@ -77,7 +77,7 @@ def create_nn(topology, act_f):
 # topologia # error Min. set entrenamiento / error Min set control
 # topology = [p, 10, 1] # 0.2430 / 0.2511
 # topology = [p, 11, 7, 1] # 0.2382 / 0.2499
-topology = [p, p, 1]
+topology = [p, p*2, p*3, 1]
 # topology = [p, 10, 1]
 
 neural_net = create_nn(topology, sigm)
