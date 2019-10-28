@@ -4,13 +4,17 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 from IPython.display import clear_output
+import math
 
 # LEER EL DATASET
 entradas = []
 with open('X_train.csv') as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
     for row in csv_reader:
-        line = [float(row[0]), float(row[1]), float(row[2]), float(row[3]), float(row[4])]
+        # line = [float(row[0]), float(row[1]), float(row[2]), float(row[3]), float(row[4])]
+        media = 5  # Normalizar con media 0.
+        line = [float(row[0]) - media, float(row[1]) - media, float(row[2]) - media, float(row[3]) - media, float(row[4]) - media]
+
         entradas.append(line)
 
 
@@ -24,13 +28,17 @@ assert len(entradas) == len(salida_esperada)
 
 # TODO: No recortar las entradas.
 
-n = 750  # Corte de los datos.
+
+n = int(len(entradas) * 0.75)  # Corte de los datos de entramiento.
+print("Cantidad datos: " + str(len(entradas)))
 p = len(entradas[0])  # Cantidad de entradas.
 
 X = np.array(entradas[:n])
+# X = X / np.sqrt(np.sum(X**2))  # Normalizar
 Y = np.array(salida_esperada[:n])
 
 X_hidden = np.array(entradas[n:])
+# X_hidden = X_hidden / np.sqrt(np.sum(X_hidden**2))  # Normalizar
 Y_hidden = np.array(salida_esperada[n:])
 
 Y = Y[:, np.newaxis]
@@ -52,7 +60,7 @@ class neural_layer():
 sigm = (lambda x: 1 / (1 + np.e ** (-x)),
         lambda x: x * (1 - x))
 
-relu = lambda x: np.maximum(0, x)  # Se activa en > 0.
+relu = lambda x: np.maximum(0, x)
 
 # CREAMOS LA RED NEURONAL
 def create_nn(topology, act_f):
@@ -66,7 +74,11 @@ def create_nn(topology, act_f):
 
 # FUNCION DE ENTRENAMIENTO
 
-topology = [p, 5, 10, 1]
+# topologia # error Min. set entrenamiento / error Min set control
+# topology = [p, 10, 1] # 0.2430 / 0.2511
+# topology = [p, 11, 7, 1] # 0.2382 / 0.2499
+topology = [p, p, 1]
+# topology = [p, 10, 1]
 
 neural_net = create_nn(topology, sigm)
 
@@ -108,28 +120,27 @@ def train(neural_net, X, Y, l2_cost, lr=0.5, train=True):
     return out[-1][1]
 
 
-train(neural_net, X, Y, l2_cost, 0.5)
 
 # VISUALIZACIÓN Y TEST
-neural_n = create_nn(topology, sigm)
+neural_n = neural_net
 
 loss = []
 loss_hidden = []
 
 
-for iteracion in range(2500):
+for iteracion in range(4500):
 
     # Entrenemos a la red!
-    if iteracion < 100:
-        pY = train(neural_n, X, Y, l2_cost, lr=0.1)
-    elif iteracion < 750:
+    if iteracion < 300:
         pY = train(neural_n, X, Y, l2_cost, lr=0.01)
     elif iteracion < 1500:
+        pY = train(neural_n, X, Y, l2_cost, lr=0.01)
+    elif iteracion < 2400:
         pY = train(neural_n, X, Y, l2_cost, lr=0.001)
     else:
         pY = train(neural_n, X, Y, l2_cost, lr=0.0001)
 
-    if iteracion % 25 == 0:
+    if iteracion % 450 == 0:
         # print(pY)
 
         loss.append(l2_cost[0](pY, Y))
@@ -142,3 +153,9 @@ for iteracion in range(2500):
         plt.plot(range(len(loss_hidden)), loss_hidden, linestyle="dashed")
         plt.show()
         time.sleep(0.5)
+
+print(min(loss))
+print(min(loss_hidden))
+print(neural_n[0].W)
+# print(neural_n[1].W)
+# print(neural_n[2].W)
