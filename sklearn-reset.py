@@ -1,10 +1,15 @@
 import csv
-import time
 
 import numpy as np
+import scipy as sc
 import matplotlib.pyplot as plt
-from IPython.display import clear_output
-import math
+
+from sklearn.datasets import make_circles
+
+# CREAR EL DATASET
+
+
+p = 5
 
 # LEER EL DATASET
 entradas = []
@@ -12,7 +17,7 @@ with open('X_train.csv') as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
     for row in csv_reader:
         line = [float(row[0]), float(row[1]), float(row[2]), float(row[3]), float(row[4])]
-
+        # line = [float(row[0]), float(row[1])]
         entradas.append(line)
 
 
@@ -24,41 +29,21 @@ with open('Y_train.csv') as csv_file:
 
 assert len(entradas) == len(salida_esperada)
 
-entradas = np.array(entradas)
-# for i in range(len(entradas)):
-#     media = np.mean(entradas[i])
-#     maximo = np.max(entradas[i])
-#     for j in range(len(entradas[i])):
-#         entradas[i][j] = (entradas[i][j] - media) / maximo   # mover a media 0 y varianza 1
-
-salida_esperada = np.array(salida_esperada)
-
-## -- Mezclar el orden de los datos. -- (Sospecho que estan ordenados de alguna manera)
-#
-# rnd_seed = np.random.get_state()
-# print(rnd_seed)
-# np.random.shuffle(entradas)
-# np.random.set_state(rnd_seed)
-# np.random.shuffle(salida_esperada)
-
-n = int(len(entradas) * 0.75)  # Corte de los datos de entramiento.
-print("Cantidad datos: " + str(len(entradas)))
-p = len(entradas[0])  # Cantidad de entradas.
+n = 1500
 
 X = np.array(entradas[:n])
-Y = np.array(salida_esperada[:n])
-
 X_hidden = np.array(entradas[n:])
+Y = np.array(salida_esperada[:n])
 Y_hidden = np.array(salida_esperada[n:])
-
 Y = Y[:, np.newaxis]
+Y_hidden = Y_hidden[:, np.newaxis]
+
 
 
 # CLASE DE LA CAPA DE LA RED
 
 class neural_layer():
 
-    # n_conn: Numero de conjuntos
     def __init__(self, n_conn, n_neur, act_f):
         self.act_f = act_f
 
@@ -67,12 +52,23 @@ class neural_layer():
 
 
 # FUNCIONES DE ACTIVACION
-sigm = (lambda x: 1 / (1 + np.e ** (-x)),  # forward
-        lambda x: x * (1 - x))  # backward
+
+sigm = (lambda x: 1 / (1 + np.e ** (-x)),
+        lambda x: x * (1 - x))
 
 relu = lambda x: np.maximum(0, x)
 
+_x = np.linspace(-5, 5, 100)
+plt.plot(_x, relu(_x))
+
 # CREAMOS LA RED NEURONAL
+
+l0 = neural_layer(p, 4, sigm)
+l1 = neural_layer(4, 8, sigm)
+
+
+# ...
+
 def create_nn(topology, act_f):
     nn = []
 
@@ -126,46 +122,39 @@ def train(neural_net, X, Y, l2_cost, lr=0.5, train=True):
     return out[-1][1]
 
 
+train(neural_net, X, Y, l2_cost, 0.5)
+print("")
 
 # VISUALIZACIÓN Y TEST
-neural_n = neural_net
+
+import time
+from IPython.display import clear_output
+
+neural_n = create_nn(topology, sigm)
 
 loss = []
 loss_hidden = []
 
-try:
-    for iteracion in range(45000):
+for i in range(5000):
 
-        # Entrenemos a la red!
-        # if iteracion < 11250:
-        #     pY = train(neural_n, X, Y, l2_cost, lr=0.000001)
-        # elif iteracion < 450:
-        #     pY = train(neural_n, X, Y, l2_cost, lr=0.00001)
-        # else:
-        #     pY = train(neural_n, X, Y, l2_cost, lr=0.0000001)
-
+    # Entrenemos a la red!
+    if i < 500:
         pY = train(neural_n, X, Y, l2_cost, lr=0.001)
+    else:
+        pY = train(neural_n, X, Y, l2_cost, lr=0.0001)
 
-        # if iteracion % 450 == 0:
-        #     time.sleep(0.5)
+    if i % 500 == 0:
 
-        if iteracion % 450 == 0:
-            # print(pY)
+        print(pY)
+        print("-----" + str(i/500) + "------")
 
-            loss.append(l2_cost[0](pY, Y))
+        loss.append(l2_cost[0](pY, Y))
 
-            error_set_oculto = train(neural_n, X_hidden, Y_hidden, l2_cost, train=False)
-            loss_hidden.append(l2_cost[0](error_set_oculto, Y_hidden))
+        error_set_oculto = train(neural_n, X_hidden, Y_hidden, l2_cost, train=False)
+        loss_hidden.append(l2_cost[0](error_set_oculto, Y_hidden))
 
-            clear_output(wait=True)
-            plt.plot(range(len(loss)), loss)
-            plt.plot(range(len(loss_hidden)), loss_hidden, linestyle="dashed")
-            plt.show()
-            time.sleep(0.5)
-
-finally: # Mostrar aunque se interrumpa.
-    print(min(loss))
-    print(min(loss_hidden))
-    # print(neural_n[0].W)
-# print(neural_n[1].W)
-# print(neural_n[2].W)
+        plt.show()
+        plt.plot(range(len(loss)), loss)
+        plt.plot(range(len(loss_hidden)), loss_hidden, linestyle="dashed")
+        plt.show()
+        time.sleep(0.5)

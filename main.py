@@ -26,21 +26,22 @@ def main():
 
     # Transformacion
     transformado = []
-    for x in entradas[:1000]:
+    for x in entradas[:10]:
         transformado.append([
             x[4] / (x[0] * x[1] * x[2] * x[3]),
-            x[0],
-            x[1],
-            x[2],
-            x[3],
+            # x[0],
+            # x[1],
+            # x[2],
+            # x[3],
             x[4]
         ])
 
     transformado = np.array(transformado)
     for i in range(len(transformado)):
+        media = int(np.mean(transformado[i]))
+        max = int(np.max(transformado[i]))
         for j in range(len(transformado[i])):
-            transformado[i][j] = transformado[i][j] - np.mean(transformado[i])  # mover a media 0
-            transformado[i][j] = transformado[i][j] / np.max(transformado[i])  # normalizar entre -1 y 1.
+            transformado[i][j] = (transformado[i][j] - media) / max
 
     # Grafico
     colors = ['r', 'b']
