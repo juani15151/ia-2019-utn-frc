@@ -1,6 +1,9 @@
 import csv
 from io import open
+
+import math
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 def main():
@@ -21,17 +24,23 @@ def main():
 
     assert len(entradas) == len(salida_esperada)
 
-    # TODO: Normalizar los valores entre 0 y 10 primero?
-
     # Transformacion
     transformado = []
-    for x in entradas:
-        transformado.append([x[4]**2,
-                             # x[0] * x[1] * x[2] * x[3] * x[4],
-                             x[0]**2 * x[1],
-                             x[0] * x[1]**2,
-                             ])
+    for x in entradas[:1000]:
+        transformado.append([
+            x[4] / (x[0] * x[1] * x[2] * x[3]),
+            x[0],
+            x[1],
+            x[2],
+            x[3],
+            x[4]
+        ])
 
+    transformado = np.array(transformado)
+    for i in range(len(transformado)):
+        for j in range(len(transformado[i])):
+            transformado[i][j] = transformado[i][j] - np.mean(transformado[i])  # mover a media 0
+            transformado[i][j] = transformado[i][j] / np.max(transformado[i])  # normalizar entre -1 y 1.
 
     # Grafico
     colors = ['r', 'b']
@@ -40,12 +49,10 @@ def main():
         for x2 in range(x1, cantidad_caracteristicas):
             if x1 == x2:
                 continue
-            # for i in range(0, len(transformado)):
-            for i in range(0, 500):
+            for i in range(0, len(transformado)):
                 entrada_actual = transformado[i]
                 plt.scatter(entrada_actual[x1], entrada_actual[x2], c=colors[salida_esperada[i]])
             # plt.plot()  # Muestra el grafico
-
             plt.savefig("datos/test/x{0}-x{1}.png".format(x1, x2))
             plt.clf()  # Limpia el grafico
 

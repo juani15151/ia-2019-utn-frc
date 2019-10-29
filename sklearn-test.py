@@ -12,8 +12,13 @@ with open('X_train.csv') as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
     for row in csv_reader:
         line = [float(row[0]), float(row[1]), float(row[2]), float(row[3]), float(row[4])]
-        line.append(line[4]**2)
-        line.append(line[0]*line[1]*line[2]*line[3])
+        # line.append(line[4] / (line[0]*line[1]*line[2]*line[3]))
+        # line.append(line[4]**2)
+        # line.append(line[0]/line[4])
+        # line.append(line[0]/line[1])
+        # line.append(math.log(line[0]))
+        # line.append(math.tan(line[1]))
+        # line.append(math.tan(line[4]))
 
         entradas.append(line)
 
@@ -27,20 +32,23 @@ with open('Y_train.csv') as csv_file:
 assert len(entradas) == len(salida_esperada)
 
 entradas = np.array(entradas)
-# entradas = entradas / np.sqrt(np.sum(entradas**2)) # Normalizar
-entradas = entradas - np.mean(entradas)  # mover a media 0
-entradas = entradas / np.max(entradas)  # normalizar entre -1 y 1.
+for i in range(len(entradas)):
+    media = np.mean(entradas[i])
+    maximo = np.max(entradas[i])
+    for j in range(len(entradas[i])):
+        entradas[i][j] = (entradas[i][j] - media) / maximo   # mover a media 0 y varianza 1
+
 salida_esperada = np.array(salida_esperada)
 
 ## -- Mezclar el orden de los datos. -- (Sospecho que estan ordenados de alguna manera)
+#
+# rnd_seed = np.random.get_state()
+# print(rnd_seed)
+# np.random.shuffle(entradas)
+# np.random.set_state(rnd_seed)
+# np.random.shuffle(salida_esperada)
 
-rnd_seed = np.random.get_state()
-print(rnd_seed)
-np.random.shuffle(entradas)
-np.random.set_state(rnd_seed)
-np.random.shuffle(salida_esperada)
-
-n = int(len(entradas) * 0.75)  # Corte de los datos de entramiento.
+n = int(len(entradas) * 0.5)  # Corte de los datos de entramiento.
 print("Cantidad datos: " + str(len(entradas)))
 p = len(entradas[0])  # Cantidad de entradas.
 
@@ -86,7 +94,8 @@ def create_nn(topology, act_f):
 # topologia # error Min. set entrenamiento / error Min set control
 # topology = [p, 10, 1] # 0.2430 / 0.2511
 # topology = [p, 11, 7, 1] # 0.2382 / 0.2499
-topology = [p, 7, 11, 1]
+# topology = [p, 7, 11, 13, 1]
+topology = [p, 10, 25, 1]
 # topology = [p, 10, 1]
 
 neural_net = create_nn(topology, sigm)
@@ -136,38 +145,39 @@ neural_n = neural_net
 loss = []
 loss_hidden = []
 
+try:
+    for iteracion in range(450000):
 
-for iteracion in range(18000):
+        # Entrenemos a la red!
+        # if iteracion < 11250:
+        #     pY = train(neural_n, X, Y, l2_cost, lr=0.000001)
+        # elif iteracion < 450:
+        #     pY = train(neural_n, X, Y, l2_cost, lr=0.00001)
+        # else:
+        #     pY = train(neural_n, X, Y, l2_cost, lr=0.0000001)
 
-    # Entrenemos a la red!
-    # if iteracion < 11250:
-    #     pY = train(neural_n, X, Y, l2_cost, lr=0.000001)
-    # elif iteracion < 450:
-    #     pY = train(neural_n, X, Y, l2_cost, lr=0.00001)
-    # else:
-    #     pY = train(neural_n, X, Y, l2_cost, lr=0.0000001)
+        pY = train(neural_n, X, Y, l2_cost, lr=0.0001)
 
-    pY = train(neural_n, X, Y, l2_cost, lr=0.000001)
+        if iteracion % 450 == 0:
+            time.sleep(0.5)
 
-    # if iteracion % 400 == 0:
-    #     time.sleep(0.5)
+        if iteracion % 4500 == 0:
+            # print(pY)
 
-    if iteracion % 450 == 0:
-        # print(pY)
+            loss.append(l2_cost[0](pY, Y))
 
-        loss.append(l2_cost[0](pY, Y))
+            error_set_oculto = train(neural_n, X_hidden, Y_hidden, l2_cost, train=False)[0][0]
+            loss_hidden.append(l2_cost[0](error_set_oculto, Y_hidden))
 
-        error_set_oculto = train(neural_n, X_hidden, Y_hidden, l2_cost, train=False)[0][0]
-        loss_hidden.append(l2_cost[0](error_set_oculto, Y_hidden))
+            clear_output(wait=True)
+            plt.plot(range(len(loss)), loss)
+            plt.plot(range(len(loss_hidden)), loss_hidden, linestyle="dashed")
+            plt.show()
+            time.sleep(0.5)
 
-        clear_output(wait=True)
-        plt.plot(range(len(loss)), loss)
-        plt.plot(range(len(loss_hidden)), loss_hidden, linestyle="dashed")
-        plt.show()
-        time.sleep(0.5)
-
-print(min(loss))
-print(min(loss_hidden))
-print(neural_n[0].W)
+finally: # Mostrar aunque se interrumpa.
+    print(min(loss))
+    print(min(loss_hidden))
+    # print(neural_n[0].W)
 # print(neural_n[1].W)
 # print(neural_n[2].W)
