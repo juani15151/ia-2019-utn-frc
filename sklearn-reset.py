@@ -128,7 +128,6 @@ print("")
 # VISUALIZACIÓN Y TEST
 
 import time
-from IPython.display import clear_output
 
 neural_n = create_nn(topology, sigm)
 
@@ -143,11 +142,12 @@ for i in range(5000):
     else:
         pY = train(neural_n, X, Y, l2_cost, lr=0.0001)
 
+    if i % 300 == 0:
+        time.sleep(0.5)  # Evita CPU al 100%
+
     if i % 500 == 0:
 
-        print(pY)
-        print("-----" + str(i/500) + "------")
-
+        # print(pY)  # pY son las salidas de la ultima capa.
         loss.append(l2_cost[0](pY, Y))
 
         error_set_oculto = train(neural_n, X_hidden, Y_hidden, l2_cost, train=False)
@@ -158,3 +158,20 @@ for i in range(5000):
         plt.plot(range(len(loss_hidden)), loss_hidden, linestyle="dashed")
         plt.show()
         time.sleep(0.5)
+
+
+# Ya entreado. Aplicar
+entradas = []
+with open('X_test.csv') as csv_file:
+    csv_reader = csv.reader(csv_file, delimiter=',')
+    for row in csv_reader:
+        line = [float(row[0]), float(row[1]), float(row[2]), float(row[3]), float(row[4])]
+        # line = [float(row[0]), float(row[1])]
+        entradas.append(line)
+
+X_final = np.array(entradas)
+Y_final = train(neural_n, X_hidden, Y_hidden, l2_cost, train=False)
+
+with open('Y_test.csv', 'w+') as csv_file:
+    for i in range(len(Y_final)):
+        print(str(Y_final[i][0]), file=csv_file)
