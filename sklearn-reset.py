@@ -35,23 +35,33 @@ class IOUtils:
             csv_file.flush()  # Obliga a escribir el contenido del buffer de salida.
 
 
-# LEER EL DATASET
+class Utils:
 
+    @staticmethod
+    def dividir_conjunto(vector, proporcion):
+        """
+        Divide un vector segun un porcentaje dado.
+        :param vector:
+        :param proporcion: valor entre 0 y  1 usado para el corte.
+        :return:
+        """
+        assert 0 < proporcion < 1
+        corte = int(len(vector) * proporcion)
+
+        return vector[corte:], vector[:corte]
+
+
+# MAIN
+
+# Leer el set de datos y salidas esperadas.
 entradas = IOUtils.leer_csv("X_train.csv")  # Matriz (2000 x 5)
-
-p = len(entradas[0])  # Cantidad de caracteristicas.
-
 salida_esperada = IOUtils.leer_csv("Y_train.csv")  # Vector columna.
 
-# Los archivos deben tener la misma cantidad de registros.
-assert len(entradas) == len(salida_esperada)
+assert len(entradas) == len(salida_esperada)  # Los archivos deben tener la misma cantidad de registros.
 
-n = 1500 # Cantidad de registros
-
-X = np.array(entradas[:n])
-X_hidden = np.array(entradas[n:])
-Y = np.array(salida_esperada[:n])
-Y_hidden = np.array(salida_esperada[n:])
+# Separar parte del conjunto para medir el error. Necesario para detectar sobre-entrenamiento.
+X_entrenamiento, X_test = Utils.dividir_conjunto(entradas, 0.75)
+Y_entrenamiento, Y_test = Utils.dividir_conjunto(salida_esperada, 0.75)
 
 
 # CLASE DE LA CAPA DE LA RED
@@ -114,7 +124,8 @@ def create_nn(topology, act_f):
 
 # Siempre empieza con la cantidad de caracteristicas,
 # y sale con 1 neurona porque clasifica de forma binaria.
-topology = [p, 10, 20, 1]
+cantidad_caracteristicas = len(entradas[0])
+topology = [cantidad_caracteristicas, 10, 20, 1]
 
 neural_net = create_nn(topology, sigm)
 
@@ -206,13 +217,13 @@ for i in range(10000):
 
     # Entrenemos a la red!
     if i < 10:
-        pY = train(neural_net, X, Y, l2_cost, lr=0.01)
+        pY = train(neural_net, X_entrenamiento, Y_entrenamiento, l2_cost, lr=0.01)
     # elif i < 3900:
     #     pY = train(neural_net, X, Y, l2_cost, lr=0.001)
     # elif i < 7500:
     #     pY = train(neural_net, X, Y, l2_cost, lr=0.0001)
     else:
-        pY = train(neural_net, X, Y, l2_cost, lr=0.001)
+        pY = train(neural_net, X_entrenamiento, Y_entrenamiento, l2_cost, lr=0.001)
 
     # if i % 300 == 0:
     #     time.sleep(0.5)  # Evita CPU al 100%
@@ -223,13 +234,13 @@ for i in range(10000):
         # loss.append(l2_cost[0](pY, Y))
         salida_pY = binarizar_sigm(pY)
 
-        loss.append(error_real(salida_pY, Y))
+        loss.append(error_real(salida_pY, Y_entrenamiento))
 
-        error_set_oculto = train(neural_net, X_hidden, Y_hidden, l2_cost, train=False)
+        error_set_oculto = train(neural_net, X_test, Y_test, l2_cost, train=False)
         salida_oculto = binarizar_sigm(error_set_oculto)
 
         # loss_hidden.append(l2_cost[0](salida, Y_hidden))
-        loss_hidden.append(error_real(salida_oculto, Y_hidden))
+        loss_hidden.append(error_real(salida_oculto, Y_test))
 
         plt.show()
         plt.plot(range(i, i + len(loss[-10:])), loss[-10:])
