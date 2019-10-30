@@ -1,4 +1,5 @@
 import csv
+import time
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -49,6 +50,22 @@ class Utils:
         corte = int(len(vector) * proporcion)
 
         return vector[corte:], vector[:corte]
+
+    @staticmethod
+    def binarizar_sigm(vector):
+        """
+        Toma un vector con valores de la funcion sigmoide y los binariza
+        :param vector:
+        :return:
+        """
+        binarizado = []
+        for item in vector:
+            binarizado.append(Utils.binarizar_valor(item, 0.5))
+        return binarizado
+
+    @staticmethod
+    def binarizar_valor(x, corte):
+        return 0 if x < corte else 1
 
 
 # MAIN
@@ -105,15 +122,27 @@ sigm = (
 
 class RedNeuronal:
 
-    def __init__(self, topologia, funcion_activacion):
+    def __init__(self, topologia):
         self.capas = []
 
         for i in range(len(topologia) - 1):
-            self.capas.append(Capa(topologia[i], topologia[i + 1], funcion_activacion))
+            self.capas.append(Capa(topologia[i], topologia[i + 1], sigm))
 
         # TODO: Creo que no hace falta la funcion del error aca.
         self.funcion_error = lambda Yp, Yr: np.mean((Yp - Yr) ** 2)  # Error cuadratico medio.
         self.funcion_error_derivada = lambda Yp, Yr: (Yp - Yr)
+
+    def procesar(self, X):
+        """
+        Pasa la entrada a traves de cada capa de la red.
+        :param X:
+        :return:
+        """
+        for capa in self.capas:
+            _, salida = capa.procesar_lote(X)
+            X = salida
+
+        return Utils.binarizar_sigm(salida)
 
     def entrenar(self, X, Y, lr=0.5, train=True):
         # El vector de entradas es inicialmente los datos.
@@ -161,7 +190,7 @@ class RedNeuronal:
                 self.capas[l].b = self.capas[l].b - np.mean(deltas[0], axis=0, keepdims=True) * lr
                 self.capas[l].W = self.capas[l].W - out[l][1].T @ deltas[0] * lr
 
-        return out[-1][1]
+        return Utils.binarizar_sigm(out[-1][1])
 
 
 # FUNCION DE ENTRENAMIENTO
@@ -171,21 +200,10 @@ class RedNeuronal:
 cantidad_caracteristicas = len(entradas[0])
 topology = [cantidad_caracteristicas, 10, 20, 1]
 
-neural_net = RedNeuronal(topology, sigm)
-
-# Funcion de costo
-l2_cost = (
-    lambda Yp, Yr: np.mean((Yp - Yr) ** 2),  # Error cuadratico medio.
-    lambda Yp, Yr: (Yp - Yr)  # Derivada del error cuadratico medio.
-)
-
-
-
-
+neural_net = RedNeuronal(topology)
 
 # VISUALIZACIÓN Y TEST
 
-import time
 
 loss = []  # Costos (error).
 loss_hidden = []
@@ -198,55 +216,38 @@ def error_real(salidas, salidas_esperadas):
             errores += 1.0
     return errores / len(salidas)
 
-sigm_binary = lambda x: 0 if x < 0.5 else 1
-
-def binarizar_sigm(vector):
-    binarizado = []
-    for item in vector:
-        binarizado.append(sigm_binary(item))
-    return binarizado
-
 
 for i in range(10000):
 
     # Entrenemos a la red!
     if i < 10:
         pY = neural_net.entrenar(X_entrenamiento, Y_entrenamiento, lr=0.01)
-    # elif i < 3900:
-    #     pY = train(neural_net, X, Y, l2_cost, lr=0.001)
-    # elif i < 7500:
-    #     pY = train(neural_net, X, Y, l2_cost, lr=0.0001)
     else:
         pY = neural_net.entrenar(X_entrenamiento, Y_entrenamiento, lr=0.001)
-
-    # if i % 300 == 0:
-    #     time.sleep(0.5)  # Evita CPU al 100%
 
     if i % 300 == 0:
 
         # print(pY)  # pY son las salidas de la ultima capa.
         # loss.append(l2_cost[0](pY, Y))
-        salida_pY = binarizar_sigm(pY)
+        salida_pY = pY
 
         loss.append(error_real(salida_pY, Y_entrenamiento))
 
         error_set_oculto = neural_net.entrenar(X_test, Y_test, train=False)
-        salida_oculto = binarizar_sigm(error_set_oculto)
 
         # loss_hidden.append(l2_cost[0](salida, Y_hidden))
-        loss_hidden.append(error_real(salida_oculto, Y_test))
+        loss_hidden.append(error_real(error_set_oculto, Y_test))
 
         plt.show()
         plt.plot(range(i, i + len(loss[-10:])), loss[-10:])
         plt.plot(range(i, i + len(loss_hidden[-10:])), loss_hidden[-10:], linestyle="dashed")
         plt.show()
-        time.sleep(0.5)
+        time.sleep(0.5)  # Importante para evitar CPU al 100%.
 
 
 # Ya entreado. Aplicar
 entradas = IOUtils.leer_csv("X_test.csv")
 
 Y_final = neural_net.entrenar(entradas, None, train=False)
-Y_final = binarizar_sigm(Y_final)
 
 IOUtils.escribir_csv('Test.csv', Y_final)
