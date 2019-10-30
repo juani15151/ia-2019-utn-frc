@@ -3,22 +3,47 @@ import csv
 import numpy as np
 import matplotlib.pyplot as plt
 
+
+class IOUtils:
+
+    @staticmethod
+    def leer_csv(nombre_archivo):
+        """
+        Lee un archivo csv y parsea su contenido a float.
+        :return: Matriz (vector de vectores) con los valores.
+        """
+        with open(nombre_archivo) as csv_file:
+            csv_reader = csv.reader(csv_file, delimiter=',')
+
+            filas = [valores for valores in csv_reader]
+
+            # Retornamos el vector de vectores de entrada.
+            # Parseando los datos a float.
+            return np.array(filas).astype(float)
+
+    @staticmethod
+    def escribir_csv(nombre_archivo, lineas):
+        """
+        Sobrescribe el contenido del archivo con el contenido dado.
+        :param nombre_archivo: Donde escribir. Si no existe lo crea.
+        :param lineas: Vector con el contenido a escribir.
+        :return: None
+        """
+        with open(nombre_archivo, 'w+') as csv_file:
+            for linea in lineas:
+                print(str(linea), file=csv_file)
+            csv_file.flush()  # Obliga a escribir el contenido del buffer de salida.
+
+
 # LEER EL DATASET
-entradas = []
-with open('X_train.csv') as csv_file:
-    csv_reader = csv.reader(csv_file, delimiter=',')
-    for row in csv_reader:
-        line = [float(row[0]), float(row[1]), float(row[2]), float(row[3]), float(row[4])]
-        entradas.append(line)
 
-p = len(line) # Cantidad de caracteristicas.
+entradas = IOUtils.leer_csv("X_train.csv")  # Matriz (2000 x 5)
 
-salida_esperada = []
-with open('Y_train.csv') as csv_file:
-    csv_reader = csv.reader(csv_file, delimiter=',')
-    for line in csv_reader:
-        salida_esperada.append(int(line[0]))
+p = len(entradas[0])  # Cantidad de caracteristicas.
 
+salida_esperada = IOUtils.leer_csv("Y_train.csv")  # Vector columna.
+
+# Los archivos deben tener la misma cantidad de registros.
 assert len(entradas) == len(salida_esperada)
 
 n = 1500 # Cantidad de registros
@@ -27,11 +52,6 @@ X = np.array(entradas[:n])
 X_hidden = np.array(entradas[n:])
 Y = np.array(salida_esperada[:n])
 Y_hidden = np.array(salida_esperada[n:])
-
-# Convertir los Y en matriz columna.
-Y = Y[:, np.newaxis]
-Y_hidden = Y_hidden[:, np.newaxis]
-
 
 
 # CLASE DE LA CAPA DE LA RED
@@ -219,18 +239,9 @@ for i in range(10000):
 
 
 # Ya entreado. Aplicar
-entradas = []
-with open('X_test.csv') as csv_file:
-    csv_reader = csv.reader(csv_file, delimiter=',')
-    for row in csv_reader:
-        line = [float(row[0]), float(row[1]), float(row[2]), float(row[3]), float(row[4])]
-        entradas.append(line)
+entradas = IOUtils.leer_csv("X_test.csv")
 
-X_final = np.array(entradas)
-Y_final = train(neural_net, X_final, None, l2_cost, train=False)
+Y_final = train(neural_net, entradas, None, l2_cost, train=False)
 Y_final = binarizar_sigm(Y_final)
 
-with open('Y_test.csv', 'w+') as csv_file:
-    for i in Y_final:
-        print(str(i), file=csv_file)
-    csv_file.flush()
+IOUtils.escribir_csv('Test.csv', Y_final)
