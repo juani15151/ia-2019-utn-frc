@@ -200,36 +200,57 @@ def main():
     # Siempre empieza con la cantidad de caracteristicas,
     # y sale con 1 neurona porque clasifica de forma binaria.
     cantidad_caracteristicas = len(entradas[0])
-    topologia = [cantidad_caracteristicas, 10, 20, 1]
+    # topologia = [cantidad_caracteristicas, 11, 13, 1]  # Min. 10% / 14% (10.000 it.) (lr. 0.001)
+    # topologia = [cantidad_caracteristicas, 7, 11, 13, 1]  # Min. 12% / 11% (10.000 it.) (lr. 0.001)
+    # topologia = [cantidad_caracteristicas, 7, 11, 7, 1]  # Min. 10% / 12% (10.000 it.) (lr. 0.001)
+    # topologia = [cantidad_caracteristicas, 7, 11, 13, 11, 7, 1]  # Min. 32% / 33% (10.000 it.) (lr. 0.001)
+    # topologia = [cantidad_caracteristicas, 7, 11, 13, 5, 1]  # Min. 09% / 13% (10.000 it.) (lr. 0.001)
+    # topologia = [cantidad_caracteristicas, 7, 11, 13, 5, 1]  # Min. 10% / 12% (20.000 it.) (lr. 0.001)
+    # topologia = [cantidad_caracteristicas, 7, 11, 13, 5, 1]  # Min. 09% / 13% (20.000 it.) (lr. 0.001 / 0.0001)
+    # topologia = [cantidad_caracteristicas, 7, 11, 19, 5, 1]  # Min. 11% / 13% (10.000 it.) (lr. 0.001)
+    # topologia = [cantidad_caracteristicas, 7, 11, 19, 5, 1]  # Min. 11% / 11% (20.000 it.) (lr. 0.001 / 0.0001)
+    topologia = [cantidad_caracteristicas, 7, 11, 15, 4, 1]  # Min. 11% / 11% (20.000 it.) (lr. 0.001 / 0.0001)
+    # topologia = [cantidad_caracteristicas, 7, 11, 23, 7, 1]  # Min. 10% / 15% (20.000 it.) (lr. 0.001 / 0.0001)
+    # topologia = [cantidad_caracteristicas, 7, 11, 19, 7, 4, 1]  # Min. 11% / 11% (20.000 it.) (lr. 0.001 / 0.0001)
 
     ref_neuronal = RedNeuronal(topologia)
-
 
     E_entrenamiento = []  # Error.
     E_test = []
 
-    for i in range(10000):
+    for i in range(20000):
 
         # Entrenamiento
         learning_rate = None
 
-        if i < 10:
-            learning_rate = 0.01
-        else:
+        if i < 100:
+            learning_rate = 0.1
+        elif i < 10000:
             learning_rate = 0.001
+        elif i < 20000:
+            learning_rate = 0.0001
+        else:
+            learning_rate = 0.00001
 
         salida_entrenamiento = ref_neuronal.entrenar(X_entrenamiento, Y_entrenamiento, learning_rate)
 
         # Visualizacion
         if i % 300 == 0:
+            print(i)
+
             E_entrenamiento.append(Utils.proporcion_error(salida_entrenamiento, Y_entrenamiento))
 
             salida_test = ref_neuronal.procesar(X_test)
             E_test.append(Utils.proporcion_error(salida_test, Y_test))
 
             plt.show()
+            # Mostrar completo
             plt.plot(range(len(E_entrenamiento)), E_entrenamiento)
             plt.plot(range(len(E_test)), E_test, linestyle="dashed")
+            # o mostrar ultimos 10
+            # plt.plot(range(len(E_entrenamiento[-10:])), E_entrenamiento[-10:])
+            # plt.plot(range(len(E_test[-10:])), E_test[-10:], linestyle="dashed")
+
             plt.show()
             time.sleep(0.5)  # Importante para evitar CPU al 100%.
 
