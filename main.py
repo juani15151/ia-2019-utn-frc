@@ -26,25 +26,15 @@ def main():
 
     # Transformacion
     transformado = []
-    for x in entradas[:10]:
+    for x in entradas[:300]:
         transformado.append([
-            x[4] / (x[0] * x[1] * x[2] * x[3]),
-            # x[0],
-            # x[1],
-            # x[2],
-            # x[3],
-            x[4]
+            x[4] ** 2,
+            x[0] * x[1] * x[2] * x[3]
         ])
 
-    transformado = np.array(transformado)
-    for i in range(len(transformado)):
-        media = int(np.mean(transformado[i]))
-        max = int(np.max(transformado[i]))
-        for j in range(len(transformado[i])):
-            transformado[i][j] = (transformado[i][j] - media) / max
-
     # Grafico
-    colors = ['r', 'b']
+    colors = ['k', 'r']
+    markers = ['x', 'o']
     cantidad_caracteristicas = len(transformado[0])
     for x1 in range(0, cantidad_caracteristicas):
         for x2 in range(x1, cantidad_caracteristicas):
@@ -52,7 +42,7 @@ def main():
                 continue
             for i in range(0, len(transformado)):
                 entrada_actual = transformado[i]
-                plt.scatter(entrada_actual[x1], entrada_actual[x2], c=colors[salida_esperada[i]])
+                plt.scatter(entrada_actual[x1], entrada_actual[x2], c=colors[salida_esperada[i]], marker=markers[salida_esperada[i]])
             # plt.plot()  # Muestra el grafico
             plt.savefig("datos/test/x{0}-x{1}.png".format(x1, x2))
             plt.clf()  # Limpia el grafico

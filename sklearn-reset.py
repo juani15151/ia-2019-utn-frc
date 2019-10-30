@@ -93,10 +93,12 @@ class Capa:
         self.act_f = act_f  # Introduce no linealidad.
 
         # Vector B para cada neurona. (Vector columna con la entrada unitaria)
-        self.b = np.random.rand(1, cantidad_neuronas) * 2 - 1  # Random normalizado a valores entre -1 y 1.
+        # Random normalizado a valores entre -1 y 1.
+        self.b = np.random.rand(1, cantidad_neuronas) * 2 - 1
 
         # Matriz de pesos para cada neurona.
-        self.W = np.random.rand(cantidad_entradas, cantidad_neuronas) * 2 - 1  # Random normalizado a valores entre -1 y 1.
+        # Random normalizado a valores entre -1 y 1.
+        self.W = np.random.rand(cantidad_entradas, cantidad_neuronas) * 2 - 1
 
     def procesar_lote(self, entradas):
         # Pasamos las entradas por el vector de pesos.
@@ -122,8 +124,9 @@ class RedNeuronal:
         for i in range(len(topologia) - 1):
             self.capas.append(Capa(topologia[i], topologia[i + 1], sigm))
 
-        # TODO: Creo que no hace falta la funcion del error aca.
-        self.funcion_error = lambda Yp, Yr: np.mean((Yp - Yr) ** 2)  # Error cuadratico medio.
+        # Error cuadratico medio.
+        self.funcion_error = lambda Yp, Yr: np.mean((Yp - Yr) ** 2)
+        # Derivada del error cuadratico medio
         self.funcion_error_derivada = lambda Yp, Yr: (Yp - Yr)
 
     def procesar(self, X):
@@ -141,14 +144,14 @@ class RedNeuronal:
     def entrenar(self, X, Y, lr=0.1):
         # El vector de entradas es inicialmente los datos.
         # Despues son las salidas de la capa anterior.
-        out = [(None, X)]
+        salida = [(None, X)]
 
         # Forward pass
         for l, layer in enumerate(self.capas):
-            z, a = layer.procesar_lote(out[-1][1])
+            valores_brutos, valores_activacion = layer.procesar_lote(salida[-1][1])
 
             # Guardamos salidas de la neurona y la activacion para la proxima capa.
-            out.append((z, a))
+            salida.append((valores_brutos, valores_activacion))
 
         # Backward pass
         deltas = []  # Valores en funcion al error.
@@ -159,59 +162,50 @@ class RedNeuronal:
 
             # Se usa l + 1 porque no tenemos realmente capa inicial
             # solo registramos las capas ocultas y la de salida
-            z = out[l + 1][0]
-            a = out[l + 1][1]
+            valores_brutos = salida[l + 1][0]
+            valores_activacion = salida[l + 1][1]
 
             # Calculo de los deltas de la ultima capa. Es directamente el error de la capa.
             if l == len(self.capas) - 1:
                 # Formula en minuto 52 del video.
                 # Insert 0 agrega al inicio. Porque estamos recorriendo de atras hacia adelante.
-                deltas.insert(0, self.funcion_error_derivada(a, Y) * self.capas[l].act_f[1](a))
+                deltas.insert(0, self.funcion_error_derivada(valores_activacion, Y)
+                              * self.capas[l].act_f[1](valores_activacion))
             # Calcular los deltas en funcion de los deltas de la capa previa.
             else:
                 # Multiplicamos el error actual por la matriz de la capa anterior.
                 # Tomamos la matriz de pesos transpuesta para que tenga sentido la operacion.
-                deltas.insert(0, deltas[0] @ _W.T * self.capas[l].act_f[1](a))
+                deltas.insert(0, deltas[0] @ _W.T * self.capas[l].act_f[1](valores_activacion))
 
-            # Guardamos una copia del actual. Porque lo modificamos con el gradient descent.
+            # Guardamos una copia del actual. Porque lo vamos a modificar.
             _W = self.capas[l].W
 
             # Gradient descent -> Actualizamos los pesos a medida que operamos.
 
             # Actualizamos el parametro independiente
             self.capas[l].b = self.capas[l].b - np.mean(deltas[0], axis=0, keepdims=True) * lr
-            self.capas[l].W = self.capas[l].W - out[l][1].T @ deltas[0] * lr
+            self.capas[l].W = self.capas[l].W - salida[l][1].T @ deltas[0] * lr
 
-        return Utils.binarizar_sigm(out[-1][1])
+        # Salida de la funcion de activacion de la ultima capa
+        return Utils.binarizar_sigm(salida[-1][1])
 
 
 def main():
-
     # Leer el set de datos y salidas esperadas.
-    entradas = IOUtils.leer_csv("X_train.csv")  # Matriz (2000 x 5)
+    X_desconocido = IOUtils.leer_csv("X_train.csv")  # Matriz (2000 x 5)
     salida_esperada = IOUtils.leer_csv("Y_train.csv")  # Vector columna.
 
-    assert len(entradas) == len(salida_esperada)  # Los archivos deben tener la misma cantidad de registros.
+    # Los archivos deben tener la misma cantidad de registros.
+    assert len(X_desconocido) == len(salida_esperada)
 
-    # Separar parte del conjunto para medir el error. Necesario para detectar sobre-entrenamiento.
-    X_entrenamiento, X_test = Utils.dividir_conjunto(entradas, 0.75)
+    # Separar parte del conjunto para medir el error.
+    X_entrenamiento, X_test = Utils.dividir_conjunto(X_desconocido, 0.75)
     Y_entrenamiento, Y_test = Utils.dividir_conjunto(salida_esperada, 0.75)
 
     # Siempre empieza con la cantidad de caracteristicas,
     # y sale con 1 neurona porque clasifica de forma binaria.
-    cantidad_caracteristicas = len(entradas[0])
-    # topologia = [cantidad_caracteristicas, 11, 13, 1]  # Min. 10% / 14% (10.000 it.) (lr. 0.001)
-    # topologia = [cantidad_caracteristicas, 7, 11, 13, 1]  # Min. 12% / 11% (10.000 it.) (lr. 0.001)
-    # topologia = [cantidad_caracteristicas, 7, 11, 7, 1]  # Min. 10% / 12% (10.000 it.) (lr. 0.001)
-    # topologia = [cantidad_caracteristicas, 7, 11, 13, 11, 7, 1]  # Min. 32% / 33% (10.000 it.) (lr. 0.001)
-    # topologia = [cantidad_caracteristicas, 7, 11, 13, 5, 1]  # Min. 09% / 13% (10.000 it.) (lr. 0.001)
-    # topologia = [cantidad_caracteristicas, 7, 11, 13, 5, 1]  # Min. 10% / 12% (20.000 it.) (lr. 0.001)
-    # topologia = [cantidad_caracteristicas, 7, 11, 13, 5, 1]  # Min. 09% / 13% (20.000 it.) (lr. 0.001 / 0.0001)
-    # topologia = [cantidad_caracteristicas, 7, 11, 19, 5, 1]  # Min. 11% / 13% (10.000 it.) (lr. 0.001)
-    # topologia = [cantidad_caracteristicas, 7, 11, 19, 5, 1]  # Min. 11% / 11% (20.000 it.) (lr. 0.001 / 0.0001)
-    topologia = [cantidad_caracteristicas, 7, 11, 15, 4, 1]  # Min. 11% / 11% (20.000 it.) (lr. 0.001 / 0.0001)
-    # topologia = [cantidad_caracteristicas, 7, 11, 23, 7, 1]  # Min. 10% / 15% (20.000 it.) (lr. 0.001 / 0.0001)
-    # topologia = [cantidad_caracteristicas, 7, 11, 19, 7, 4, 1]  # Min. 11% / 11% (20.000 it.) (lr. 0.001 / 0.0001)
+    cantidad_caracteristicas = len(X_desconocido[0])
+    topologia = [cantidad_caracteristicas, 7, 11, 15, 4, 1]  # Min. 11% / 11%
 
     ref_neuronal = RedNeuronal(topologia)
 
@@ -221,16 +215,12 @@ def main():
     for i in range(20000):
 
         # Entrenamiento
-        learning_rate = None
-
         if i < 100:
             learning_rate = 0.1
         elif i < 10000:
             learning_rate = 0.001
-        elif i < 20000:
-            learning_rate = 0.0001
         else:
-            learning_rate = 0.00001
+            learning_rate = 0.0001
 
         salida_entrenamiento = ref_neuronal.entrenar(X_entrenamiento, Y_entrenamiento, learning_rate)
 
@@ -247,21 +237,17 @@ def main():
             # Mostrar completo
             plt.plot(range(len(E_entrenamiento)), E_entrenamiento)
             plt.plot(range(len(E_test)), E_test, linestyle="dashed")
-            # o mostrar ultimos 10
-            # plt.plot(range(len(E_entrenamiento[-10:])), E_entrenamiento[-10:])
-            # plt.plot(range(len(E_test[-10:])), E_test[-10:], linestyle="dashed")
 
             plt.show()
             time.sleep(0.5)  # Importante para evitar CPU al 100%.
 
+    # Ya entreada la red. Aplicar sobre set desconocido
+    X_desconocido = IOUtils.leer_csv("X_test.csv")
+    Y_desconocido = ref_neuronal.procesar(X_desconocido)
 
-    # Ya entreado. Aplicar
-    entradas = IOUtils.leer_csv("X_test.csv")
-
-    Y_final = ref_neuronal.procesar(entradas)
-
-    IOUtils.escribir_csv('Test.csv', Y_final)
+    IOUtils.escribir_csv('Test.csv', Y_desconocido)
 
 
+# Punto de entrada al programa.
 if __name__ == "__main__":
     main()
