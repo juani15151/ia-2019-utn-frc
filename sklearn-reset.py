@@ -64,28 +64,33 @@ X_entrenamiento, X_test = Utils.dividir_conjunto(entradas, 0.75)
 Y_entrenamiento, Y_test = Utils.dividir_conjunto(salida_esperada, 0.75)
 
 
-# CLASE DE LA CAPA DE LA RED
-
-class neural_layer():
+class Capa:
 
     # TODO: Poner el procesamiento hacia adelante y atrás acá.
 
-    def __init__(self, n_conn, n_neur, act_f):
+    def __init__(self, cantidad_entradas, cantidad_neuronas, act_f):
         """
 
-        :param n_conn: Numero de conexiones entrantes desde la capa anterior.
-        :param n_neur: Numero de neuronas.
-        :param act_f: Funcion de activacion.
+        :param cantidad_entradas: Numero de conexiones entrantes desde la capa anterior.
+        :param cantidad_neuronas: Numero de neuronas.
+        :param act_f: Conjunto de funcion de activacion. Contiene la funcion de activacion y su derivada.
         """
         self.act_f = act_f
 
-        # TODO: Convertir a un unico vector de pesos W y agregar una entrada siempre en 1.
         # Vector B para cada neurona. (Vector columna con la entrada unitaria)
-        self.b = np.random.rand(1, n_neur) * 2 - 1  # Random normalizado a valores entre -1 y 1.
+        self.b = np.random.rand(1, cantidad_neuronas) * 2 - 1  # Random normalizado a valores entre -1 y 1.
 
         # Matriz de pesos para cada neurona.
-        self.W = np.random.rand(n_conn, n_neur) * 2 - 1  # Random normalizado a valores entre -1 y 1.
+        self.W = np.random.rand(cantidad_entradas, cantidad_neuronas) * 2 - 1  # Random normalizado a valores entre -1 y 1.
 
+    def procesar_lote(self, entradas):
+        # Pasamos las entradas por el vector de pesos.
+        salida_neurona = entradas @ self.W + self.b
+
+        # Pasamos el resultado por la funcion de activacion.
+        salida_activacion = self.act_f[0](salida_neurona)
+
+        return salida_neurona, salida_activacion
 
 # FUNCIONES DE ACTIVACION
 
@@ -97,27 +102,66 @@ sigm = (
     lambda x: x * (1 - x)  # Derivada de la funcion de activacion
 )
 
-# Opcional. Para usarla buscar la derivada.
-# relu = lambda x: np.maximum(0, x)  # fun relu _/ (y=0 hasta x=0 y luego y=x)
 
+class RedNeuronal:
 
-# CREAMOS LA RED NEURONAL
+    def __init__(self, topologia, funcion_activacion):
+        self.capas = []
 
-# Ejemplo manual:
-# Util si se quieren combinar funciones de activacion.
-# l0 = neural_layer(p, 4, sigm)
-# l1 = neural_layer(4, 8, sigm)
+        for i in range(len(topologia) - 1):
+            self.capas.append(Capa(topologia[i], topologia[i + 1], funcion_activacion))
 
+        # TODO: Creo que no hace falta la funcion del error aca.
+        self.funcion_error = lambda Yp, Yr: np.mean((Yp - Yr) ** 2)  # Error cuadratico medio.
+        self.funcion_error_derivada = lambda Yp, Yr: (Yp - Yr)
 
-# ...
+    def entrenar(self, X, Y, lr=0.5, train=True):
+        # El vector de entradas es inicialmente los datos.
+        # Despues son las salidas de la capa anterior.
+        out = [(None, X)]
 
-def create_nn(topology, act_f):
-    nn = []
+        # Forward pass
+        for l, layer in enumerate(self.capas):
+            z, a = layer.procesar_lote(out[-1][1])
 
-    for l, layer in enumerate(topology[:-1]):  # Descartamos el ultimo para evitar IndexOutOfBounds
-        nn.append(neural_layer(topology[l], topology[l + 1], act_f))
+            # Guardamos salidas de la neurona y la activacion para la proxima capa.
+            out.append((z, a))
 
-    return nn
+        if train:
+
+            # Backward pass
+            deltas = []  # Valores en funcion al error.
+
+            # Recorremos de atras hacia adelante.
+            # TODO: Es bastante confuso el tema de los indices.
+            for l in reversed(range(0, len(self.capas))):
+
+                # Se usa l + 1 porque no tenemos realmente capa inicial
+                # solo registramos las capas ocultas y la de salida
+                z = out[l + 1][0]
+                a = out[l + 1][1]
+
+                # Calculo de los deltas de la ultima capa. Es directamente el error de la capa.
+                if l == len(self.capas) - 1:
+                    # Formula en minuto 52 del video.
+                    # Insert 0 agrega al inicio. Porque estamos recorriendo de atras hacia adelante.
+                    deltas.insert(0, self.funcion_error_derivada(a, Y) * self.capas[l].act_f[1](a))
+                # Calcular los deltas en funcion de los deltas de la capa previa.
+                else:
+                    # Multiplicamos el error actual por la matriz de la capa anterior.
+                    # Tomamos la matriz de pesos transpuesta para que tenga sentido la operacion.
+                    deltas.insert(0, deltas[0] @ _W.T * self.capas[l].act_f[1](a))
+
+                # Guardamos una copia del actual. Porque lo modificamos con el gradient descent.
+                _W = self.capas[l].W
+
+                # Gradient descent -> Actualizamos los pesos a medida que operamos.
+
+                # Actualizamos el parametro independiente
+                self.capas[l].b = self.capas[l].b - np.mean(deltas[0], axis=0, keepdims=True) * lr
+                self.capas[l].W = self.capas[l].W - out[l][1].T @ deltas[0] * lr
+
+        return out[-1][1]
 
 
 # FUNCION DE ENTRENAMIENTO
@@ -127,7 +171,7 @@ def create_nn(topology, act_f):
 cantidad_caracteristicas = len(entradas[0])
 topology = [cantidad_caracteristicas, 10, 20, 1]
 
-neural_net = create_nn(topology, sigm)
+neural_net = RedNeuronal(topology, sigm)
 
 # Funcion de costo
 l2_cost = (
@@ -136,57 +180,7 @@ l2_cost = (
 )
 
 
-def train(neural_net, X, Y, l2_cost, lr=0.5, train=True):
-    # El vector de entradas es inicialmente los datos.
-    # Despues son las salidas de la capa anterior.
-    out = [(None, X)]
 
-    # Forward pass
-    for l, layer in enumerate(neural_net):
-        # Calculamos la suma ponderada (W1*X1 + W2*X2 + ... + B)
-        z = out[-1][1] @ neural_net[l].W + neural_net[l].b
-        # Pasamos el resultado por la funcion de activacion.
-        a = neural_net[l].act_f[0](z)
-
-        # Guardamos salidas de la neurona y la activacion para la proxima capa.
-        out.append((z, a))
-
-    if train:
-
-        # Backward pass
-        deltas = []  # Valores en funcion al error.
-
-        # Recorremos de atras hacia adelante.
-        # TODO: Es bastante confuso el tema de los indices.
-        for l in reversed(range(0, len(neural_net))):
-
-            # Se usa l + 1 porque no tenemos realmente capa inicial
-            # solo registramos las capas ocultas y la de salida
-            z = out[l + 1][0]
-            a = out[l + 1][1]
-
-            # Calculo de los deltas de la ultima capa. Es directamente el error de la capa.
-            if l == len(neural_net) - 1:
-                # Formula en minuto 52 del video.
-                # Insert 0 agrega al inicio. Porque estamos recorriendo de atras hacia adelante.
-                deltas.insert(0, l2_cost[1](a, Y) * neural_net[l].act_f[1](a))
-            # Calcular los deltas en funcion de los deltas de la capa previa.
-            else:
-                # Multiplicamos el error actual por la matriz de la capa anterior.
-                # Tomamos la matriz de pesos transpuesta para que tenga sentido la operacion.
-                deltas.insert(0, deltas[0] @ _W.T * neural_net[l].act_f[1](a))
-
-            # Guardamos una copia del actual. Porque lo modificamos con el gradient descent.
-            _W = neural_net[l].W
-
-            # Gradient descent -> Actualizamos los pesos a medida que operamos.
-
-            # Actualizamos el parametro independiente
-            # TODO: Sacar el vector independiente y agregarlo a la matriz de pesos W.
-            neural_net[l].b = neural_net[l].b - np.mean(deltas[0], axis=0, keepdims=True) * lr
-            neural_net[l].W = neural_net[l].W - out[l][1].T @ deltas[0] * lr
-
-    return out[-1][1]
 
 
 # VISUALIZACIÓN Y TEST
@@ -217,13 +211,13 @@ for i in range(10000):
 
     # Entrenemos a la red!
     if i < 10:
-        pY = train(neural_net, X_entrenamiento, Y_entrenamiento, l2_cost, lr=0.01)
+        pY = neural_net.entrenar(X_entrenamiento, Y_entrenamiento, lr=0.01)
     # elif i < 3900:
     #     pY = train(neural_net, X, Y, l2_cost, lr=0.001)
     # elif i < 7500:
     #     pY = train(neural_net, X, Y, l2_cost, lr=0.0001)
     else:
-        pY = train(neural_net, X_entrenamiento, Y_entrenamiento, l2_cost, lr=0.001)
+        pY = neural_net.entrenar(X_entrenamiento, Y_entrenamiento, lr=0.001)
 
     # if i % 300 == 0:
     #     time.sleep(0.5)  # Evita CPU al 100%
@@ -236,7 +230,7 @@ for i in range(10000):
 
         loss.append(error_real(salida_pY, Y_entrenamiento))
 
-        error_set_oculto = train(neural_net, X_test, Y_test, l2_cost, train=False)
+        error_set_oculto = neural_net.entrenar(X_test, Y_test, train=False)
         salida_oculto = binarizar_sigm(error_set_oculto)
 
         # loss_hidden.append(l2_cost[0](salida, Y_hidden))
@@ -252,7 +246,7 @@ for i in range(10000):
 # Ya entreado. Aplicar
 entradas = IOUtils.leer_csv("X_test.csv")
 
-Y_final = train(neural_net, entradas, None, l2_cost, train=False)
+Y_final = neural_net.entrenar(entradas, None, train=False)
 Y_final = binarizar_sigm(Y_final)
 
 IOUtils.escribir_csv('Test.csv', Y_final)
