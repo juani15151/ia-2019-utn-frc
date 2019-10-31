@@ -215,7 +215,7 @@ def main():
     for i in range(20000):
 
         # Entrenamiento
-        if i < 100:
+        if i < 10:
             learning_rate = 0.1
         elif i < 10000:
             learning_rate = 0.001
@@ -225,7 +225,7 @@ def main():
         salida_entrenamiento = ref_neuronal.entrenar(X_entrenamiento, Y_entrenamiento, learning_rate)
 
         # Visualizacion
-        if i % 2000 == 0:
+        if i % 500 == 0:
             print(i)
 
             E_entrenamiento.append(Utils.proporcion_error(salida_entrenamiento, Y_entrenamiento))
