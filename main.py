@@ -1,4 +1,5 @@
 import csv
+import datetime
 import time
 
 import numpy as np
@@ -80,8 +81,6 @@ class Utils:
 
 
 class Capa:
-
-    # TODO: Poner el procesamiento hacia adelante y atrás acá.
 
     def __init__(self, cantidad_entradas, cantidad_neuronas, act_f):
         """
@@ -216,7 +215,7 @@ def main():
 
         # Entrenamiento
         if i < 10:
-            learning_rate = 0.1
+            learning_rate = 0.01
         elif i < 10000:
             learning_rate = 0.001
         else:
@@ -250,4 +249,6 @@ def main():
 
 # Punto de entrada al programa.
 if __name__ == "__main__":
+    print(datetime.datetime.now())
     main()
+    print(datetime.datetime.now())
